@@ -2,33 +2,39 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ] # Если ваша ветка называется master, замените на master
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # Используем конкретную версию Ubuntu для стабильности
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Кэширование ускоряет последующие сборки в разы
-      - name: Cache Buildozer
-        uses: actions/cache@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: .buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          python-version: '3.11'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          pip install --user --upgrade Cython==0.29.33 buildozer 
+          # Добавляем путь к buildozer в PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Build with Buildozer
-        # Используем более актуальный и стабильный экшен
-        uses: GearSnd/buildozer-action@v1
-        id: buildozer
-        with:
-          workdir: .
-          buildozer_version: master
+        run: |
+          # Автоматическое подтверждение всех лицензий Android SDK
+          yes | buildozer android debug
+        env:
+          # Это предотвратит ошибки связанные с правами доступа в контейнере
+          BUILDOZER_ALLOW_ORG_NAME_AS_PACKAGE: 1
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: package
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
