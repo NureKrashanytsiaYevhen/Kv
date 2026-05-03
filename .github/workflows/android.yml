@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ] 
+    branches: [ main ]
 
 jobs:
   build:
@@ -12,8 +12,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Кэширование ускоряет последующие сборки в разы
+      - name: Cache Buildozer
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+
       - name: Build with Buildozer
-        uses: ArtemSerebrennkov/buildozer-action@v1
+        # Используем более актуальный и стабильный экшен
+        uses: GearSnd/buildozer-action@v1
         id: buildozer
         with:
           workdir: .
